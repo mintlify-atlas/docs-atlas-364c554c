@@ -1,0 +1,111 @@
+---
+title: "Scoring System and Score Display"
+sidebarTitle: "Scoring"
+description: "Discover how Santa Run's time-based score increments by 1 every 100ms, how it's rendered live in the DOM, copied to the Game Over screen, and fully reset on page reload."
+---
+
+Santa Run uses a purely time-based scoring system. There are no coins to collect, no multipliers, and no bonus events — the score simply increments by 1 every 100 milliseconds that the player stays alive. The longer Santa runs without hitting a flame, the higher the final score. This makes survival the only strategy.
+
+## Score Calculation
+
+The `updateScore()` function is registered as a `setInterval` callback at 100ms when the player presses Enter to start the game:
+
+```javascript
+//Update Score
+var score = document.getElementById("score");
+var newScore = 0;
+var scoreWorkerId = 0;
+function updateScore(){
+    newScore++; 
+    score.innerHTML = newScore;
+}
+```
+
+`newScore` starts at `0` and is incremented by `1` on every tick. After incrementing, `score.innerHTML` is set to the new value, updating the on-screen display in real time. The interval is stored in `scoreWorkerId` so it can be cleared on collision:
+
+```javascript
+scoreWorkerId = setInterval(updateScore, 100);
+```
+
+`scoreWorkerId` is cleared inside `moveBlocks()` the moment a collision is detected, freezing the score at its final value.
+
+<Info>
+  Because the tick rate is 100ms (10 ticks per second), score increases by 10 points per second of survival. Some quick benchmarks:
+  - **10 seconds** → ~100 points
+  - **30 seconds** → ~300 points
+  - **60 seconds** → ~600 points
+  - **2 minutes** → ~1,200 points
+
+  These figures assume no lag or dropped frames in the JavaScript event loop.
+</Info>
+
+## Score Display Styling
+
+The live score is rendered in a `<div class="score" id="score">` element placed directly inside `#background` in `index.html`. Its CSS class defines:
+
+| Property | Value |
+|----------|-------|
+| `position` | `absolute` |
+| `font-size` | `90px` |
+| `font-family` | `"Arial"` |
+| `font-weight` | `bold` |
+| `margin-left` | `30px` |
+
+The `90px` font size makes the score highly visible over the scrolling background. `absolute` positioning and `margin-left: 30px` pin it to the upper-left corner of the game viewport. The initial HTML content of the element is `0`, matching `newScore`'s initial value:
+
+```html
+<div class="score" id="score">0</div>
+```
+
+## Game Over Score
+
+When the dead animation completes, the final score is copied from `newScore` into the Game Over overlay:
+
+```javascript
+var deadSound = new Audio("dead.mp3");
+//Dead Function
+var deadImageNumber = 1;
+var deadWorkerId = 0;
+function dead(){
+    deadImageNumber++;
+    if(deadImageNumber == 18){
+        deadImageNumber = 17;
+
+        santa.style.marginTop = "580px";
+        document.getElementById("gameOver").style.visibility = "visible";
+        document.getElementById("endScore").innerHTML = newScore;
+    }
+    santa.src = "images/Dead ("+deadImageNumber+").png";
+}
+```
+
+On the tick where `deadImageNumber` reaches `18`, three things happen in sequence: Santa is repositioned to ground level, the `#gameOver` overlay becomes visible, and `document.getElementById('endScore').innerHTML` is set to `newScore`. The `#endScore` element lives inside the `.gameOver` div in `index.html`:
+
+```html
+<div class="gameOver" id="gameOver">
+    <div>Game Over</div>
+    <div>Your Score</div>
+    <div id="endScore">0</div>
+
+    <button class="b1" onclick="re();">Try Again</button>
+</div>
+```
+
+Because `scoreWorkerId` was already cleared at the moment of collision (inside `moveBlocks()`), `newScore` holds its final value and does not change again before being written to `#endScore`.
+
+## Score Reset
+
+Clicking the Try Again button calls `re()`, which reloads the entire page:
+
+```javascript
+//Restart
+function re(){
+    location.reload();
+}
+```
+
+`location.reload()` performs a full page refresh. This destroys all JavaScript state — `newScore` returns to `0`, all worker IDs return to `0`, and the DOM is rebuilt from `index.html`. There is no explicit reset logic for individual variables; the page reload handles everything at once.
+
+<Tip>
+  Because the score is purely time-based, improving your score is entirely about obstacle timing — not reflexes per se. Flame obstacles are spaced with a random gap between 400px and 1000px, moving at 20px per 100ms tick (200px per second). A consistent, well-timed jump on every obstacle is more reliable than jumping early or late. Practicing the rhythm of the `jumpSound` cue can help establish consistent timing.
+</Tip>

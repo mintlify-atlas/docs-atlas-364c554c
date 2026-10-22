@@ -1,0 +1,51 @@
+{
+  "projectType": "general",
+  "projectName": "Santa Run",
+  "projectDescription": "A browser-based endless runner game where you guide Santa Claus through a scrolling landscape, jumping over flame obstacles to achieve the highest score possible.",
+  "theme": "almond",
+  "primaryColor": "#C0392B",
+  "lightColor": "#E8F4F8",
+  "darkColor": "#1A2B4A",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": ["introduction", "how-to-play"]
+      },
+      {
+        "group": "Game Mechanics",
+        "pages": ["mechanics/controls", "mechanics/animations", "mechanics/obstacles", "mechanics/scoring"]
+      },
+      {
+        "group": "Code Reference",
+        "pages": ["reference/architecture", "reference/functions", "reference/assets"]
+      },
+      {
+        "group": "Contributing",
+        "pages": ["contributing/setup", "contributing/customization"]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Sprite-based Santa character with four animation states: Idle, Run, Jump, and Dead",
+    "Randomized flame obstacle spawning with variable gap distances (400–1000px)",
+    "Parallax scrolling background that moves in sync with gameplay speed",
+    "Real-time score counter that increments every 100ms while alive",
+    "Sound effects for running, jumping, and game-over events",
+    "Game Over screen with final score display and instant restart",
+    "Pixel-perfect collision detection between Santa and obstacles",
+    "Pure vanilla HTML/CSS/JavaScript — no build tools or dependencies required"
+  ],
+  "publicApiSurface": [
+    "keyCheck(event) — keyboard event handler (Enter to start, Space to jump)",
+    "run() — advances Run sprite animation frame (11 frames, loops)",
+    "idle() — advances Idle sprite animation frame (16 frames, loops)",
+    "jump() — advances Jump sprite animation and updates Santa's vertical position",
+    "dead() — advances Dead sprite animation and triggers Game Over screen",
+    "createBlock() — spawns a new flame obstacle at a randomized horizontal offset",
+    "moveBlocks() — translates all active obstacles left and checks collision",
+    "moveBackground() — scrolls the parallax background left by 20px per tick",
+    "updateScore() — increments and displays the current score",
+    "re() — reloads the page to restart the game"
+  ]
+}

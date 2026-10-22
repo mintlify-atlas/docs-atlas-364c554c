@@ -1,0 +1,85 @@
+---
+title: "Santa Run Controls and Input Handling"
+sidebarTitle: "Controls"
+description: "Learn how Santa Run's keyCheck() handler reads Enter and Space key codes to start the game, trigger jumps, and manage state transitions through interval worker IDs."
+---
+
+Santa Run relies on a single keyboard event handler, `keyCheck`, wired directly to the `<body>` tag via the `onkeyup` attribute in `index.html`. Every keystroke anywhere in the browser window fires this function — no element needs focus. The handler inspects `event.which` to identify which key was pressed and then conditionally starts or modifies game state based on the current values of `runWorkerId` and `jumpWorkerId`.
+
+## Keyboard Reference
+
+| Key | Key Code | Action | Condition |
+|-----|----------|--------|-----------|
+| Enter | `13` | Starts the game — spawns all five `setInterval` workers | Only if `runWorkerId == 0` (game not yet running) |
+| Space | `32` | Triggers Santa's jump | Only if `runStart == 1` (game running) **and** `jumpWorkerId == 0` (not already mid-jump) |
+
+## The `keyCheck` Function
+
+The complete handler as it appears in `script.js`:
+
+```javascript
+var runStart = 0;
+function keyCheck(event){
+    //Enter Key
+    if(event.which == 13){
+        if(runWorkerId == 0){
+            runWorkerId = setInterval(run, 100);
+            runStart = 1;
+            runSound.play();
+            backgroundWorkerId = setInterval(moveBackground, 100);
+            scoreWorkerId = setInterval(updateScore, 100);
+            createBlockId = setInterval(createBlock, 100);
+            moveBlockId = setInterval(moveBlocks, 100);
+        }
+    }
+
+    //Space Key
+    if(event.which == 32){
+        if(runStart == 1){
+            if(jumpWorkerId == 0){
+                clearInterval(runWorkerId);
+                runSound.pause();
+
+                jumpWorkerId = setInterval(jump, 100);
+                jumpSound.play();
+            }
+        }
+    }
+}
+```
+
+**Enter key branch** — when Enter is pressed and `runWorkerId` is still `0` (its initial value), five intervals are started simultaneously, all at a 100ms tick rate:
+
+| Worker ID | Function | Purpose |
+|-----------|----------|---------|
+| `runWorkerId` | `run` | Advances Santa's run animation frames |
+| `backgroundWorkerId` | `moveBackground` | Scrolls the background image left |
+| `scoreWorkerId` | `updateScore` | Increments the player's score each tick |
+| `createBlockId` | `createBlock` | Spawns new flame obstacle `<div>` elements |
+| `moveBlockId` | `moveBlocks` | Moves all existing obstacles left and checks for collision |
+
+`runStart` is set to `1` immediately after, acting as a gate that allows the Space key to function. `runSound` (a looping MP3) begins playing.
+
+**Space key branch** — when Space is pressed and both conditions are met, the run animation interval (`runWorkerId`) is cleared and `runSound` is paused. A new interval for `jump` is started at 100ms and `jumpSound` plays. The run interval is **not** restarted here — it is restarted at the end of the `jump()` function once the animation arc completes.
+
+## Game State via Worker IDs
+
+Game state in Santa Run is tracked entirely through `setInterval` return values rather than an explicit state enum. The convention is:
+
+- **`0`** — interval has never been started, or was cleared and reset. This is the initial value for all worker IDs.
+- **Non-zero integer** — an active interval is running. The OS-assigned ID is stored so it can be passed to `clearInterval` later.
+- **`-1`** — a sentinel value used exclusively by `jumpWorkerId` after a collision.
+
+<Note>
+  During collision handling inside `moveBlocks()`, `clearInterval(jumpWorkerId)` is called and then `jumpWorkerId` is explicitly set to `-1`. This prevents the Space key guard (`if(jumpWorkerId == 0)`) from ever passing again after a collision, even if the player presses Space while the dead animation is playing. Without the `-1` sentinel, `clearInterval` would reset the ID to `undefined` rather than `0`, and the guard condition would need to account for that.
+</Note>
+
+## Event Binding
+
+The `keyCheck` function is registered directly on the `<body>` element in `index.html`:
+
+```html
+<body class="body" onkeyup="keyCheck(event);">
+```
+
+Using `onkeyup` on `<body>` means the event fires for any key released anywhere in the document. No input field, canvas, or game div needs to be clicked or focused first — the controls are active as soon as the page loads.

@@ -1,0 +1,78 @@
+---
+title: "Santa Run: A Browser-Based Vanilla JS Endless Runner"
+sidebarTitle: "Introduction"
+description: "Santa Run is a browser-based endless runner built with pure HTML, CSS, and JavaScript — no frameworks, no dependencies, just open and play."
+---
+
+This page gives you an overview of the Santa Run project: what it is, how it's structured, and what technologies power it. Whether you're looking to play or explore the code, this is your starting point.
+
+## What Is Santa Run
+
+Santa Run is an endless runner game — inspired by classics like Chrome's offline dino game — that runs entirely in any modern web browser. There's no installation and no setup required.
+
+You control Santa Claus, who runs automatically from left to right. Flame obstacles scroll in from the right side of the screen, and your only move is to **jump** over them. Every 100 milliseconds you stay alive adds one point to your score. The goal is simple: survive as long as possible.
+
+## How It's Built
+
+Santa Run is written in **pure vanilla HTML, CSS, and JavaScript** — no frameworks, no build tools, no package manager. There are exactly three code files:
+
+- **`index.html`** — the game's shell: a single HTML file that declares the DOM structure (background container, Santa sprite, score display, and Game Over overlay) and loads the two supporting files.
+- **`style.css`** — all layout and visual styling, including the parallax background, Santa's absolute positioning, obstacle sizing, and the Game Over overlay.
+- **`script.js`** — every piece of game logic: animation loops, obstacle spawning, collision detection, scoring, and audio.
+
+All assets — sprite frames, the background image, obstacle animation, and audio files — are local files referenced directly by path. No CDN, no external requests.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Sprite-Based Animation" icon="film">
+    Santa cycles through four hand-crafted animation states: **Idle** (16 frames), **Run** (11 frames), **Jump** (16 frames), and **Dead** (17 frames). Each state is driven by a `setInterval` loop that swaps the `<img>` `src` every 100ms.
+  </Card>
+  <Card title="Randomized Obstacle Spawning" icon="shuffle">
+    Flame obstacles are created dynamically and placed with a randomized gap of **400–1000px** between each one, keeping every run unpredictable. Obstacles move left at 20px per tick.
+  </Card>
+  <Card title="Parallax Scrolling Background" icon="image">
+    The background image shifts its `backgroundPositionX` by −20px every 100ms while the game is running, creating a smooth parallax scrolling effect without any canvas or library.
+  </Card>
+  <Card title="Real-Time Score Counter" icon="stopwatch">
+    A `setInterval` running every 100ms increments the score by 1 and updates the on-screen display live. Your final score reflects exactly how many 100ms intervals you survived.
+  </Card>
+  <Card title="Sound Effects" icon="volume-high">
+    Three audio cues bring the game to life: **run.mp3** loops continuously while Santa is running, **jump.mp3** plays on each jump, and **dead.mp3** triggers on collision.
+  </Card>
+  <Card title="Game Over Screen" icon="flag-checkered">
+    On collision, all intervals are cleared, the Dead animation plays through all 17 frames, and a Game Over overlay appears showing your final score alongside a **Try Again** button.
+  </Card>
+</CardGroup>
+
+## Project Structure
+
+All files live in a single flat directory — no bundler output folders, no nested `src/` directories. The `images/` folder holds every sprite frame and the background.
+
+```
+Santa-Run/
+├── index.html       # Game shell and DOM structure
+├── script.js        # All game logic
+├── style.css        # Layout and visual styles
+├── run.mp3          # Looping footstep sound
+├── jump.mp3         # Jump sound effect
+├── dead.mp3         # Death sound effect
+└── images/
+    ├── background.png
+    ├── flame.gif        # Obstacle sprite
+    ├── Run (1-11).png   # Run animation frames
+    ├── Jump (1-16).png  # Jump animation frames
+    ├── Idle (1-16).png  # Idle animation frames
+    └── Dead (1-17).png  # Death animation frames
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="How to Play" icon="gamepad" href="/how-to-play">
+    Learn the controls, understand the jump arc, and find out exactly what triggers a Game Over.
+  </Card>
+  <Card title="Controls Reference" icon="keyboard" href="/mechanics/controls">
+    A quick-reference breakdown of every key input Santa Run recognizes and what it does.
+  </Card>
+</CardGroup>

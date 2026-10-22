@@ -1,0 +1,99 @@
+---
+title: "Set Up Santa Run for Local Development"
+sidebarTitle: "Local Setup"
+description: "Clone the Santa Run repo, open it in a browser, and start editing. No dependencies, no build steps — just vanilla HTML, CSS, and JavaScript."
+---
+
+Setting up Santa Run for local development requires nothing beyond a web browser and a text editor. There are no dependencies to install, no build steps, and no configuration files to edit. The entire game runs from three files — `index.html`, `style.css`, and `script.js` — so every change you make to the source is immediately reflected when you reload the page.
+
+## Prerequisites
+
+Before you begin, make sure you have the following:
+
+- A modern web browser (Chrome, Firefox, Safari, or Edge)
+- A text editor (VS Code, Sublime Text, Notepad++, or any editor you prefer)
+- Git (optional — you can also download the repository as a ZIP)
+
+## Getting the Code
+
+<Steps>
+  <Step title="Clone or download the repository">
+    Clone the repository with Git and move into the project directory:
+
+    ```bash
+    git clone https://github.com/DhanikaJ/Santa-Run.git && cd Santa-Run
+    ```
+
+    If you prefer not to use Git, click **Code → Download ZIP** on the GitHub repository page and extract the archive.
+  </Step>
+
+  <Step title="Open the game in your browser">
+    Open `index.html` directly from your file system using the appropriate command for your OS:
+
+    ```bash
+    # macOS
+    open index.html
+
+    # Windows
+    start index.html
+
+    # Linux
+    xdg-open index.html
+    ```
+
+    Alternatively, drag the `index.html` file into any open browser tab. The game loads immediately — press **Enter** to start running and **Space** to jump.
+  </Step>
+
+  <Step title="Make a change">
+    Open `script.js` or `style.css` in your text editor and edit whatever you'd like to change. See the [File Editing Guide](#file-editing-guide) below for a map of what controls what.
+  </Step>
+
+  <Step title="Reload to see your changes">
+    Switch back to the browser tab and press **F5** (or **Cmd+R** on macOS) to reload the page. Your changes take effect immediately — there is no build or compilation step.
+  </Step>
+</Steps>
+
+## Recommended: Local Dev Server
+
+<Tip>
+  While the game works by opening `index.html` directly from disk, some browsers block Audio API calls when a page is loaded via a `file://` URL. If you find that sound effects (`run.mp3`, `jump.mp3`, `dead.mp3`) are silent, serve the project through a local HTTP server instead:
+
+  ```bash
+  # Python 3
+  python3 -m http.server 8080
+  # Then open http://localhost:8080
+  ```
+
+  VS Code users can install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension, right-click `index.html`, and select **Open with Live Server** — it also auto-reloads the page whenever you save a file.
+</Tip>
+
+## File Editing Guide
+
+All game behavior lives in just two files. Here is a quick reference for the most common changes:
+
+| What you want to change | File | What to edit |
+|---|---|---|
+| Game speed | `script.js` | The `100` ms interval value passed to `setInterval` in `keyCheck()` |
+| Obstacle size | `style.css` | `.block` `width` (currently `60px`) and `height` (currently `90px`) |
+| Jump height | `script.js` | The `20` pixel offset in `jump()` (controls pixels moved per tick) |
+| Score font | `style.css` | `.score` `font-size` (currently `90px`) and `font-family` (currently `"Arial"`) |
+| Sprites | `images/` | Swap PNG files, keeping the exact same filenames |
+| Sound effects | project root | Swap `run.mp3`, `jump.mp3`, or `dead.mp3`, keeping the same filenames |
+
+## Debugging Tips
+
+<Accordion title="Game won't start — no sound plays">
+  This is almost always the browser's autoplay policy blocking `Audio` objects that are created at script load time. The fix is to serve the game over HTTP rather than from a `file://` URL. Run `python3 -m http.server 8080` in the project directory and visit `http://localhost:8080` instead of opening the file directly.
+</Accordion>
+
+<Accordion title="Santa clips through the floor or flies off-screen">
+  Santa's starting vertical position is `santaMarginTop = 580` (pixels from the top of the viewport). The `jump()` function subtracts `20px` per tick for the first 9 ticks and adds `20px` per tick for ticks 10–16, so the net displacement is zero and Santa returns to exactly `580px`. If you change the pixel offset, change it in **both** the ascending and descending branches, and verify that `(ticks up) × offset === (ticks down) × offset` so the landing position matches the start position.
+</Accordion>
+
+<Accordion title="Score not showing or stuck at zero">
+  The score element is `<div class="score" id="score">0</div>` in `index.html`. The `updateScore` function reads `document.getElementById("score")` at the top of `script.js` — if the element ID is changed in the HTML, the reference breaks. Also confirm that `scoreWorkerId = setInterval(updateScore, 100)` is being reached when Enter is pressed; if the `keyCheck` listener is not attached to `document.body` via the `onkeyup` attribute, the game never starts and no workers are launched.
+</Accordion>
+
+## Contributing Back
+
+Once you are happy with your changes, fork the repository on GitHub, commit your work to a branch, and open a pull request against the `main` branch. Include a short description of what you changed and why — screenshots or a screen recording make review much faster.

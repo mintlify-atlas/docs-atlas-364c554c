@@ -1,0 +1,85 @@
+---
+title: "Santa Run Architecture and Code Organization"
+sidebarTitle: "Architecture"
+description: "How Santa Run's three source files work together, the interval-based game loop driving all animation, and the key design decisions behind this dependency-free browser game."
+---
+
+Santa Run's architecture is deliberately minimal — three files (HTML, CSS, JS) with no build step, no dependencies, and no module system. The entire game state lives in JavaScript global variables, and the game loop is driven by multiple `setInterval` timers. This approach keeps the project self-contained: opening `index.html` in any modern browser is all it takes to play.
+
+## File Responsibilities
+
+Each file has a single, clearly bounded role. There are no shared modules, no imports, and no bundler configuration.
+
+| File | Responsibility |
+|---|---|
+| `index.html` | DOM structure and entry point |
+| `style.css` | All visual layout and positioning |
+| `script.js` | All game logic, animation, and input handling |
+
+### `index.html`
+
+Sets up the complete DOM structure: a `.background` div that serves as the scrolling game world, a `.score` div for the live score counter, a `<img id="santa">` element whose `src` is swapped on every animation tick, and a `#gameOver` overlay with a "Try Again" `<button>`. The `<body>` tag binds the global keyboard handler via `onkeyup="keyCheck(event);"`. The CSS stylesheet is loaded in `<head>` and `script.js` is loaded at the bottom of `<body>` to ensure all DOM elements exist before the script runs.
+
+### `style.css`
+
+Positions all elements using `position: absolute` so that every element can be placed independently without affecting document flow. Defines the scrolling background via `background-image` on `.background`, the animated flame obstacle appearance on `.block` (a 60×90 px div using `images/flame.gif`), Santa's height and baseline `margin-top` on `.santa`, score typography, and the Game Over overlay layout using flexbox. No media queries or responsive breakpoints are used — the game is designed for a single fixed viewport.
+
+### `script.js`
+
+Contains all game logic in 10 functions, all operating on shared global variables. Handles sprite animation (Idle, Run, Jump, Dead), obstacle creation and movement, collision detection, background scrolling, score tracking, and keyboard input. There are no classes, no modules, and no external libraries — every function and variable is in the global scope.
+
+## Interval-Based Game Loop
+
+There is no single `requestAnimationFrame` loop. Instead, the game runs via six separate `setInterval` timers, all firing at a 100 ms interval (10 ticks per second). Each timer owns one concern and can be started or stopped independently, which is how the game transitions between states (e.g., pausing the run animation while the jump animation is active).
+
+| Worker ID Variable | Function Called | Purpose |
+|---|---|---|
+| `runWorkerId` | `run()` | Advance Run sprite frames |
+| `jumpWorkerId` | `jump()` | Advance Jump frames and move Santa vertically |
+| `backgroundWorkerId` | `moveBackground()` | Scroll background image left |
+| `scoreWorkerId` | `updateScore()` | Increment and display score |
+| `createBlockId` | `createBlock()` | Spawn a new flame obstacle |
+| `moveBlockId` | `moveBlocks()` | Move all obstacles left and check collision |
+
+All six worker IDs are initialized to `0`. A value of `0` means the interval is not running; any non-zero value is the live interval handle returned by `setInterval`. Clearing an interval is done via `clearInterval(workerId)`, but the variable is not always reset to `0` after clearing — `jumpWorkerId` is set to `-1` on collision to prevent a jump from being re-triggered.
+
+## Game State Model
+
+Game state is not stored in an object or enum — it emerges from which intervals are currently running and the value of the `runStart` flag. The lifecycle flows as follows:
+
+<Steps>
+  <Step title="Initial State">
+    Page loads. Santa displays `images/Idle (1).png` (set directly in the `<img src>` attribute in `index.html`). All worker ID variables are `0`. `runStart` is `0`. `idleWorkerId` is declared but never started — the idle frame is static, not animated.
+  </Step>
+  <Step title="Enter Pressed">
+    `keyCheck` fires with `event.which == 13`. Because `runWorkerId == 0`, five intervals are started: `runWorkerId`, `backgroundWorkerId`, `scoreWorkerId`, `createBlockId`, and `moveBlockId`. `runStart` is set to `1` and `runSound` begins looping.
+  </Step>
+  <Step title="Space Pressed">
+    `keyCheck` fires with `event.which == 32`. Because `runStart == 1` and `jumpWorkerId == 0`, `runWorkerId` is cleared and `runSound` is paused. `jumpWorkerId` is started and `jumpSound` plays.
+  </Step>
+  <Step title="Jump Completes">
+    Inside `jump()`, when `jumpImageNumber` reaches `17`, `jumpWorkerId` is cleared and reset to `0`. `runWorkerId` is restarted and `runSound` resumes. Santa is back in the run state.
+  </Step>
+  <Step title="Collision Detected">
+    Inside `moveBlocks()`, when a block's `marginLeft` falls within Santa's horizontal hitbox (18–118 px) and Santa's `marginTop` is within the vertical hitbox (520–580 px), all active intervals are cleared. `deadWorkerId` is started and `deadSound` plays.
+  </Step>
+  <Step title="Dead Animation Ends">
+    Inside `dead()`, when `deadImageNumber` reaches `18`, it is clamped to `17` (holding the last frame). Santa's `marginTop` is reset to `580px` and the `#gameOver` overlay's `visibility` is set to `"visible"`.
+  </Step>
+</Steps>
+
+## DOM Manipulation Pattern
+
+Animation and movement are achieved through direct, imperative DOM property writes on every interval tick — there is no virtual DOM or rendering abstraction.
+
+- **Sprite animation**: `santa.src` is set to a new image path string on every `run()`, `jump()`, `idle()`, or `dead()` tick. Example: `santa.src = "images/Run (" + runImageNumber + ").png";`
+- **Santa vertical position**: `santa.style.marginTop` is written directly with a pixel value each tick of `jump()` and `dead()`.
+- **Obstacle creation**: Each new obstacle is a `document.createElement("div")` with `className = "block"` and a generated `id` like `"block1"`, `"block2"`, etc. It is appended to `document.getElementById("background")`.
+- **Obstacle movement**: `moveBlocks()` loops over all block IDs, reads `currentBlock.style.marginLeft`, parses it with `parseInt`, subtracts 20, and writes it back.
+- **Background scrolling**: `backgroundX` is decremented by 20 on each `moveBackground()` tick and written to `background.style.backgroundPositionX`.
+
+## No State Cleanup
+
+<Note>
+  On restart, `re()` calls `location.reload()`, which reloads the entire page from scratch. This resets every JavaScript variable, clears every active interval, and rebuilds the DOM from `index.html`. There is no manual cleanup, no interval teardown, and no variable reset — the browser handles all of it. This is the simplest possible restart mechanism, though it means the page must fully reload (including re-parsing all assets) on every retry.
+</Note>

@@ -1,0 +1,369 @@
+---
+title: "Santa Run JavaScript Function Reference"
+sidebarTitle: "Functions"
+description: "Complete reference for all 10 functions in script.js — their signatures, behaviors, side effects, and the global variables each function reads and modifies."
+---
+
+`script.js` contains all of Santa Run's game logic in 10 functions, all operating on global variables. There are no classes, modules, or closures — every function and variable lives in the global scope. This reference documents each function's signature, behavior, side effects, and the global variables it reads and modifies.
+
+### `keyCheck(event)`
+
+The central keyboard input handler, bound to `onkeyup` on the `<body>` element. Routes Enter (key code 13) to game start and Space (key code 32) to jump.
+
+```javascript
+var runStart = 0;
+function keyCheck(event){
+    //Enter Key
+    if(event.which == 13){
+        if(runWorkerId == 0){
+            runWorkerId = setInterval(run, 100);
+            runStart = 1;
+            runSound.play();
+            backgroundWorkerId = setInterval(moveBackground, 100);
+            scoreWorkerId = setInterval(updateScore, 100);
+            createBlockId = setInterval(createBlock, 100);
+            moveBlockId = setInterval(moveBlocks, 100);
+        }
+    }
+
+    //Space Key
+    if(event.which == 32){
+        if(runStart == 1){
+            if(jumpWorkerId == 0){
+                clearInterval(runWorkerId);
+                runSound.pause();
+
+                jumpWorkerId = setInterval(jump, 100);
+                jumpSound.play();
+            }
+        }
+    }
+}
+```
+
+**Parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `event` | `KeyboardEvent` | The keyup event fired by the browser. Only `event.which` is read. |
+
+**Behavior**
+
+- **Enter (13):** Only acts if `runWorkerId == 0` (game not yet started). Starts all five game intervals and sets `runStart = 1`.
+- **Space (32):** Only acts if `runStart == 1` (game is running) and `jumpWorkerId == 0` (not already jumping). Clears the run interval, pauses run audio, starts the jump interval, and plays jump audio.
+
+**Global variables read:** `runWorkerId`, `runStart`, `jumpWorkerId`
+
+**Global variables modified:** `runWorkerId`, `runStart`, `backgroundWorkerId`, `scoreWorkerId`, `createBlockId`, `moveBlockId`, `jumpWorkerId`
+
+---
+
+### `createBlock()`
+
+Spawns a new flame obstacle `<div>` and appends it to the game world.
+
+```javascript
+var blockMarginLeft = 1000;
+var createBlockId = 0;
+var blockId = 1;
+function createBlock(){
+    var block = document.createElement("div");
+    block.className = "block";
+
+    block.id = "block"+blockId;
+    blockId++;
+
+    var gap = Math.random()*(1000-400)+400;
+    blockMarginLeft = blockMarginLeft+gap;
+
+    block.style.marginLeft = blockMarginLeft+"px";
+
+    document.getElementById("background").appendChild(block);
+}
+```
+
+**Behavior**
+
+- Creates a new `<div>` with `className = "block"` and an auto-incrementing `id` (`"block1"`, `"block2"`, …).
+- Calculates a random gap between 400 and 1000 px using `Math.random()*(1000-400)+400`, then adds it to the running `blockMarginLeft` total.
+- Sets `block.style.marginLeft` to the new cumulative position and appends the element to `#background`.
+
+**Side effects:** Appends a new `.block` div to `document.getElementById("background")`.
+
+**Global variables read:** `blockMarginLeft`, `blockId`
+
+**Global variables modified:** `blockMarginLeft` (incremented by a random 400–1000 px gap), `blockId` (incremented by 1)
+
+---
+
+### `moveBlocks()`
+
+Moves every obstacle 20 px to the left on each tick and checks whether any block has collided with Santa.
+
+```javascript
+var moveBlockId = 0;
+function moveBlocks(){
+    for(var i = 1; i<=blockId;i++){
+        var currentBlock = document.getElementById("block"+i);
+        var currentMarginLeft = currentBlock.style.marginLeft;
+        var newMarginLeft = parseInt(currentMarginLeft)-20;
+        currentBlock.style.marginLeft = newMarginLeft+"px";
+
+        if(newMarginLeft<=118){
+            if(newMarginLeft>=18){
+                if(santaMarginTop<=580){
+                    if(santaMarginTop>520){
+                        clearInterval(runWorkerId);
+                        runSound.pause();
+                        clearInterval(jumpWorkerId);
+                        jumpWorkerId = -1;
+                        clearInterval(backgroundWorkerId);
+                        clearInterval(scoreWorkerId);
+                        clearInterval(createBlockId);
+                        clearInterval(moveBlockId);
+
+                        deadWorkerId = setInterval(dead, 100);
+                        deadSound.play();
+                    }
+                }
+            }
+        }
+    }              
+}
+```
+
+**Behavior**
+
+- Loops from `i = 1` to `i <= blockId`, retrieving each block by `id`.
+- Decrements each block's `marginLeft` by 20 px.
+- **Collision detection:** A collision is registered when a block's `newMarginLeft` is between 18 and 118 px (the block is horizontally overlapping Santa) **and** `santaMarginTop` is between 521 and 580 (Santa is on the ground, not in the air).
+- On collision: all six active intervals are cleared, `jumpWorkerId` is set to `-1` (not `0`) to prevent a re-trigger, `deadWorkerId` is started, and `deadSound` plays.
+
+**Side effects:** Modifies each block's `style.marginLeft`. On collision, clears all active intervals and starts `deadWorkerId`.
+
+**Global variables read:** `blockId`, `santaMarginTop`
+
+**Global variables modified:** Each `block{i}` element's `style.marginLeft`; on collision: `runWorkerId`, `jumpWorkerId` (set to `-1`), `backgroundWorkerId`, `scoreWorkerId`, `createBlockId`, `moveBlockId`, `deadWorkerId`
+
+---
+
+### `idle()`
+
+Advances the Idle sprite animation one frame per tick, cycling through frames 1–16.
+
+```javascript
+var santa = document.getElementById("santa");
+var idleImageNumber = 1;
+var idleWorkerId = 0;
+function idle(){
+    idleImageNumber++;
+    if(idleImageNumber == 17){
+        idleImageNumber = 1;
+    }
+    santa.src = "images/Idle ("+idleImageNumber+").png";
+}
+```
+
+**Behavior**
+
+- Increments `idleImageNumber` by 1 each call.
+- Wraps back to `1` when `idleImageNumber` reaches `17`, creating a continuous 16-frame loop.
+- Sets `santa.src` to the corresponding `images/Idle (N).png` path.
+
+<Note>
+  `idleWorkerId` is declared and initialized to `0`, but `idle()` is never registered with `setInterval` anywhere in the codebase. The idle state is represented by the static `src="images/Idle (1).png"` set in `index.html`. This function exists but is effectively unused at runtime.
+</Note>
+
+**Global variables read:** `idleImageNumber`
+
+**Global variables modified:** `idleImageNumber`, `santa.src`
+
+---
+
+### `run()`
+
+Advances the Run sprite animation one frame per tick, cycling through frames 1–11.
+
+```javascript
+var runImageNumber = 1;
+var runWorkerId = 0;
+function run(){
+    runImageNumber++;
+    if(runImageNumber == 12){
+        runImageNumber = 1;
+    }
+    santa.src = "images/Run ("+runImageNumber+").png";
+}
+```
+
+**Behavior**
+
+- Increments `runImageNumber` by 1 each call.
+- Wraps back to `1` when `runImageNumber` reaches `12`, creating a continuous 11-frame loop.
+- Sets `santa.src` to `images/Run (N).png`.
+
+**Global variables read:** `runImageNumber`
+
+**Global variables modified:** `runImageNumber`, `santa.src`
+
+---
+
+### `jump()`
+
+Advances the Jump sprite animation and moves Santa vertically — upward through frames 1–9, then downward through frames 10–16. Restores the run state when the jump completes at frame 17.
+
+```javascript
+var jumpImageNumber = 1;
+var jumpWorkerId = 0;
+var santaMarginTop = 580;
+function jump(){
+    jumpImageNumber++;
+    if(jumpImageNumber<=9){
+        santaMarginTop = santaMarginTop - 20;
+        santa.style.marginTop = santaMarginTop+"px";
+    }
+    if(jumpImageNumber>=10){
+        santaMarginTop = santaMarginTop + 20;
+        santa.style.marginTop = santaMarginTop+"px";
+    }
+    if(jumpImageNumber==17){
+        jumpImageNumber=1;
+
+        clearInterval(jumpWorkerId);
+        jumpWorkerId = 0;
+
+        runWorkerId = setInterval(run, 100);
+        runSound.play();
+    }   
+}
+```
+
+**Behavior**
+
+- Increments `jumpImageNumber` each tick.
+- Frames 2–9: `santaMarginTop` is decremented by 20 px per tick (Santa moves up). Over 8 ticks this gives a total rise of 160 px (from 580 to 420 px).
+- Frames 10–16: `santaMarginTop` is incremented by 20 px per tick (Santa moves down). Over 7 ticks this gives a total descent of 140 px.
+- Frame 17: `jumpImageNumber` resets to `1`, `jumpWorkerId` is cleared and set to `0`, `runWorkerId` is restarted, and `runSound` resumes.
+
+**Side effects:** Modifies `santa.style.marginTop` on every tick. On frame 17: clears `jumpWorkerId`, restarts `runWorkerId`, resumes `runSound`.
+
+**Global variables read:** `jumpImageNumber`, `santaMarginTop`
+
+**Global variables modified:** `jumpImageNumber`, `santaMarginTop`, `santa.style.marginTop`, `santa.src` (indirectly via the sprite path — note: `jump()` does not explicitly set `santa.src`; the sprite changes are driven by `santaMarginTop` position changes only)
+
+<Note>
+  The `jump()` function moves Santa's vertical position but does **not** set `santa.src` to a Jump sprite. The Run sprite continues to display during the jump — the Jump sprite sheet (`images/Jump (N).png`) is never referenced in the current codebase. The `jumpImageNumber` variable controls vertical movement timing only.
+</Note>
+
+---
+
+### `dead()`
+
+Advances the Dead sprite animation and, on the final frame, resets Santa's vertical position and shows the Game Over overlay.
+
+```javascript
+var deadImageNumber = 1;
+var deadWorkerId = 0;
+function dead(){
+    deadImageNumber++; 
+    if(deadImageNumber == 18){
+        deadImageNumber = 17;
+
+        santa.style.marginTop = "580px";
+        document.getElementById("gameOver").style.visibility = "visible";
+        document.getElementById("endScore").innerHTML = newScore;
+    }
+    santa.src = "images/Dead ("+deadImageNumber+").png";
+}
+```
+
+**Behavior**
+
+- Increments `deadImageNumber` each tick and sets `santa.src` to the corresponding `images/Dead (N).png`.
+- When `deadImageNumber` reaches `18`, it is clamped to `17` (holding the last frame of the 17-frame animation).
+- Resets `santa.style.marginTop` to `"580px"` (the ground baseline).
+- Sets `document.getElementById("gameOver").style.visibility = "visible"`, revealing the Game Over overlay.
+- Writes the final `newScore` value to `document.getElementById("endScore").innerHTML`.
+
+**Side effects:** Shows `#gameOver` overlay, updates `#endScore` innerHTML, resets `santa.style.marginTop`.
+
+**Global variables read:** `deadImageNumber`, `newScore`
+
+**Global variables modified:** `deadImageNumber`, `santa.src`, `santa.style.marginTop`
+
+---
+
+### `moveBackground()`
+
+Scrolls the background image to the left by 20 px on every tick to create the illusion of forward movement.
+
+```javascript
+var background = document.getElementById("background");
+var backgroundX = 0;
+var backgroundWorkerId = 0;
+function moveBackground(){
+    backgroundX = backgroundX - 20;
+    background.style.backgroundPositionX = backgroundX+"px";
+}
+```
+
+**Behavior**
+
+- Decrements `backgroundX` by 20 on each call (no lower bound — the value grows increasingly negative indefinitely).
+- Writes the new value to `background.style.backgroundPositionX`. Because the `.background` element uses `background-size: cover`, the browser tiles or clips the image naturally as the offset increases.
+
+**Global variables read:** `backgroundX`
+
+**Global variables modified:** `backgroundX`, `background.style.backgroundPositionX`
+
+---
+
+### `updateScore()`
+
+Increments the player's score by 1 each tick and updates the on-screen score display.
+
+```javascript
+var score = document.getElementById("score");
+var newScore = 0;
+var scoreWorkerId = 0;
+function updateScore(){
+    newScore++;
+    score.innerHTML = newScore;
+}
+```
+
+**Behavior**
+
+- Increments `newScore` by 1 on each call. At 10 ticks per second (100 ms interval), the score increases by ~10 points per second of survival.
+- Writes the new value directly to `score.innerHTML`, updating the on-screen counter.
+
+**Global variables read:** `newScore`
+
+**Global variables modified:** `newScore`, `score.innerHTML`
+
+---
+
+### `re()`
+
+Restarts the game by reloading the page. This is the click handler for the "Try Again" button in the Game Over overlay.
+
+```javascript
+function re(){
+    location.reload();
+}
+```
+
+**Behavior**
+
+- Calls `location.reload()` with no arguments, triggering a full page refresh.
+- All JavaScript variables are reset to their initial values, all active intervals are cleared by the browser, and the DOM is reconstructed from `index.html`.
+
+**Parameters:** None
+
+**Return value:** None
+
+**Side effects:** Reloads the entire page, resetting all game state.
+
+**Global variables read:** None
+
+**Global variables modified:** None (page reload resets everything)

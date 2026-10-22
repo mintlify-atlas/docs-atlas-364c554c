@@ -1,0 +1,134 @@
+---
+title: "Flame Obstacles: Spawning and Collision"
+sidebarTitle: "Obstacles"
+description: "Understand how Santa Run creates flame obstacle divs, randomizes spacing between 400–1000px, moves them at 20px per tick, and detects collision using margin-based hitboxes."
+---
+
+Santa Run spawns flame obstacles as `<div>` elements styled with `flame.gif` as a repeating background image. Each obstacle is created by `createBlock()`, appended to the `#background` div, and then translated left every 100ms by `moveBlocks()`. A collision check runs on every single movement tick — the moment a flame block's horizontal position overlaps Santa's fixed x-position while Santa is on the ground, the game ends.
+
+## Obstacle Appearance
+
+The `.block` CSS class defines the visual properties of every flame obstacle:
+
+| Property | Value |
+|----------|-------|
+| `position` | `absolute` |
+| `width` | `60px` |
+| `height` | `90px` |
+| `background-image` | `url(images/flame.gif)` |
+| `background-size` | `cover` |
+| `margin-top` | `675px` |
+
+The flame sits at `675px` from the top of the viewport, placing it at ground level, slightly below where Santa runs (`580px` marginTop). The `absolute` positioning means each block's horizontal position is controlled entirely by its `marginLeft` value.
+
+## Spawning: `createBlock()`
+
+A new flame block is created every 100ms via `createBlockId = setInterval(createBlock, 100)`:
+
+```javascript
+//Create Block
+var blockMarginLeft = 1000;
+var createBlockId = 0;
+var blockId = 1;
+function createBlock(){
+    var block = document.createElement("div");
+    block.className = "block";
+
+    block.id = "block"+blockId;
+    blockId++;
+
+    var gap = Math.random()*(1000-400)+400;
+    blockMarginLeft = blockMarginLeft+gap;
+
+    block.style.marginLeft = blockMarginLeft+"px";
+
+    document.getElementById("background").appendChild(block);
+}
+```
+
+Each call to `createBlock()`:
+
+1. Creates a new `<div>` element and assigns it the `block` class and a unique id (`block1`, `block2`, `block3`, …).
+2. Increments the global `blockId` counter so the next block gets the next sequential ID.
+3. Generates a random gap: `Math.random() * (1000 - 400) + 400`, producing a value between **400px and 1000px**.
+4. Adds that gap to the cumulative `blockMarginLeft` variable and applies it as the block's `marginLeft`.
+5. Appends the block to `#background`.
+
+<Note>
+  `blockMarginLeft` is a cumulative variable. It starts at `1000` and grows with each new block. Every new block's starting `marginLeft` equals the previous block's starting `marginLeft` plus the random gap. This means earlier blocks may already be far off the left edge of the screen when new ones appear — the gap controls spacing between consecutive obstacles, not their absolute positions.
+</Note>
+
+## Moving: `moveBlocks()`
+
+Every 100ms, `moveBlocks()` iterates over every block that has been created and shifts each one 20px to the left:
+
+```javascript
+//Move Block
+var moveBlockId = 0;
+function moveBlocks(){
+    for(var i = 1; i<=blockId;i++){
+        var currentBlock = document.getElementById("block"+i);
+        var currentMarginLeft = currentBlock.style.marginLeft;
+        var newMarginLeft = parseInt(currentMarginLeft)-20;
+        currentBlock.style.marginLeft = newMarginLeft+"px";
+
+        if(newMarginLeft<=118){
+            if(newMarginLeft>=18){
+                if(santaMarginTop<=580){
+                    if(santaMarginTop>520){
+                        clearInterval(runWorkerId);
+                        runSound.pause();
+                        clearInterval(jumpWorkerId);
+                        jumpWorkerId = -1;
+                        clearInterval(backgroundWorkerId);
+                        clearInterval(scoreWorkerId);
+                        clearInterval(createBlockId);
+                        clearInterval(moveBlockId);
+
+                        deadWorkerId = setInterval(dead, 100);
+                        deadSound.play();
+                    }
+                }
+            }
+        }
+    }              
+}
+```
+
+The loop runs from `i = 1` to `i <= blockId`, covering every block ever created. For each block, the current `marginLeft` string is read, parsed to an integer, reduced by 20, and written back. After updating position, the collision check runs immediately (see below).
+
+## Collision Detection
+
+<Warning>
+  Collision detection is not a separate system — it is evaluated inline on every block during every `moveBlocks()` tick. There is no dedicated collision loop or event. The check fires once per block per 100ms frame, meaning a fast-scrolling block could theoretically skip the window if it moves more than the hitbox width in a single tick. At 20px per tick, this does not occur with the current values.
+</Warning>
+
+A collision is registered when **both** of the following conditions are true simultaneously for the same block:
+
+| Axis | Condition | Meaning |
+|------|-----------|---------|
+| Horizontal | `newMarginLeft >= 18` AND `newMarginLeft <= 118` | Block's left edge is within a 100px window aligned with Santa |
+| Vertical | `santaMarginTop > 520` AND `santaMarginTop <= 580` | Santa is on the ground (not airborne from a jump) |
+
+When both conditions are met, the following sequence executes:
+
+1. `clearInterval(runWorkerId)` — stops the run animation.
+2. `runSound.pause()` — silences the running audio.
+3. `clearInterval(jumpWorkerId)` — clears any active jump interval.
+4. `jumpWorkerId = -1` — sets the sentinel value to block future jumps.
+5. `clearInterval(backgroundWorkerId)` — freezes the background scroll.
+6. `clearInterval(scoreWorkerId)` — stops the score counter.
+7. `clearInterval(createBlockId)` — stops new block creation.
+8. `clearInterval(moveBlockId)` — stops all block movement (including this very loop).
+9. `deadWorkerId = setInterval(dead, 100)` — starts the death animation.
+10. `deadSound.play()` — plays the death sound effect.
+
+## Collision Hitbox Diagram
+
+Santa is rendered at a fixed horizontal position in the layout — he never moves left or right, only up and down. The flame blocks scroll toward him from the right. The hitbox is defined purely through margin thresholds:
+
+**Horizontal axis:** The collision window is `marginLeft` between **18px and 118px** (a 100px wide band). This band represents the horizontal zone where the flame block's left edge is close enough to Santa's body to count as an overlap.
+
+**Vertical axis:** `santaMarginTop` between **520px** (exclusive) and **580px** (inclusive) represents Santa standing on the ground. During a jump, `santaMarginTop` drops well below 520px (reaching as low as ~420px at peak), so the vertical condition fails and Santa safely clears the flame. Once Santa lands and `santaMarginTop` returns above 520px, collision detection resumes.
+
+The 60px vertical window (520–580) and 100px horizontal window (18–118) together form an effective rectangular hitbox that approximates Santa's feet and lower body at ground level.

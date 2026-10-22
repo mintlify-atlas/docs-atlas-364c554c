@@ -1,0 +1,149 @@
+---
+title: "Santa Sprite Animations: Frames and Timing"
+sidebarTitle: "Animations"
+description: "Explore Santa Run's four animation states — Idle, Run, Jump, and Dead — including frame counts, 100ms tick timing, vertical physics, and how state transitions are managed."
+---
+
+Santa Run animates the player character by swapping individual PNG frames on the `<img id="santa">` element using the DOM `src` attribute. There is no canvas, no spritesheet clipping, and no CSS animation — each tick of a `setInterval` callback simply increments a counter and assigns a new file path to `santa.src`. There are four distinct animation states: Idle, Run, Jump, and Dead, each driven by its own interval worker and frame counter variable.
+
+## Animation States Overview
+
+| State | Function | Frame Count | Interval | Trigger |
+|-------|----------|-------------|----------|---------|
+| Idle | `idle()` | 16 frames | Defined but not auto-started | Default display on page load |
+| Run | `run()` | 11 frames | 100ms via `runWorkerId` | Enter key pressed |
+| Jump | `jump()` | 16 frames | 100ms via `jumpWorkerId` | Space key pressed |
+| Dead | `dead()` | 17 frames | 100ms via `deadWorkerId` | Collision detected |
+
+<Info>
+  The Idle animation function (`idle()`) and its worker ID (`idleWorkerId`) are defined in `script.js`, but `idleWorkerId` is never assigned a `setInterval` call anywhere in the code. Santa begins in Idle frame 1 because the static `<img>` tag in `index.html` starts with `src="images/Idle (1).png"`. The idle loop would need to be explicitly started if wanted.
+</Info>
+
+## Run Animation
+
+The `run()` function is called every 100ms once the player presses Enter:
+
+```javascript
+var runSound = new Audio("run.mp3");
+runSound.loop = true;
+//Run Function
+var runImageNumber = 1;
+var runWorkerId = 0;
+function run(){
+    runImageNumber++;
+    if(runImageNumber == 12){
+        runImageNumber = 1;
+    }
+    santa.src = "images/Run ("+runImageNumber+").png";
+}
+```
+
+Each call increments `runImageNumber` and sets `santa.src` to the corresponding `images/Run (N).png` file. When `runImageNumber` reaches `12`, it resets to `1`, creating a seamless loop across frames 1 through 11. `runSound` is a looping MP3 that plays in parallel with this animation.
+
+## Jump Animation
+
+The `jump()` function handles both the sprite swap and Santa's vertical movement using CSS `marginTop`:
+
+```javascript
+var jumpSound = new Audio("jump.mp3");
+//Jump Function
+var jumpImageNumber = 1;
+var jumpWorkerId = 0;
+var santaMarginTop = 580;
+function jump(){
+    jumpImageNumber++;
+    if(jumpImageNumber<=9){
+        santaMarginTop = santaMarginTop - 20;
+        santa.style.marginTop = santaMarginTop+"px";
+    }
+    if(jumpImageNumber>=10){
+        santaMarginTop = santaMarginTop + 20;
+        santa.style.marginTop = santaMarginTop+"px";
+    }
+    if(jumpImageNumber==17){
+        jumpImageNumber=1;
+
+        clearInterval(jumpWorkerId);
+        jumpWorkerId = 0;
+
+        runWorkerId = setInterval(run, 100);
+        runSound.play();
+    }   
+}
+```
+
+The jump plays out in two phases driven by `jumpImageNumber`:
+
+- **Frames 2–9 (ascent):** `santaMarginTop` decreases by 20px each tick. Over 8 ticks this moves Santa **160px upward** (from 580px to 420px).
+- **Frames 10–16 (descent):** `santaMarginTop` increases by 20px each tick. Over 7 ticks Santa moves **140px downward** (from 420px to 560px).
+- **Frame 17 (landing):** `jumpImageNumber` resets to `1`, `jumpWorkerId` is cleared and set back to `0`, and `runWorkerId` is restarted with a new `setInterval(run, 100)`. `runSound` resumes.
+
+<Note>
+  Notice that the ascent phase covers 8 frames (2–9) but the descent covers 7 frames (10–16), each moving 20px. At frame 17 the counter resets without applying any movement, so Santa lands at 560px rather than the starting 580px. The run interval restart at frame 17 immediately continues the next tick at 560px. The CSS `marginTop` for `.santa` is `580px` by default, but `santaMarginTop` is managed in JavaScript after the first jump.
+</Note>
+
+## Dead Animation
+
+The `dead()` function plays when a collision is detected:
+
+```javascript
+var deadSound = new Audio("dead.mp3");
+//Dead Function
+var deadImageNumber = 1;
+var deadWorkerId = 0;
+function dead(){
+    deadImageNumber++;
+    if(deadImageNumber == 18){
+        deadImageNumber = 17;
+
+        santa.style.marginTop = "580px";
+        document.getElementById("gameOver").style.visibility = "visible";
+        document.getElementById("endScore").innerHTML = newScore;
+    }
+    santa.src = "images/Dead ("+deadImageNumber+").png";
+}
+```
+
+Each tick increments `deadImageNumber` and swaps `santa.src`. When `deadImageNumber` reaches `18`:
+
+1. It is clamped back to `17`, freezing Santa on the final dead frame permanently.
+2. `santa.style.marginTop` is reset to `580px`, returning Santa to ground level even if the collision happened mid-jump.
+3. The `#gameOver` overlay's `visibility` is set to `"visible"`, revealing the Game Over screen.
+4. `document.getElementById('endScore').innerHTML` is assigned the current value of `newScore`, displaying the final score.
+
+The `dead` interval (`deadWorkerId`) is never cleared — it continues ticking indefinitely, but because `deadImageNumber` is pinned at `17`, every subsequent call only re-sets the same frame and re-writes the same values harmlessly.
+
+## Idle Animation
+
+The `idle()` function loops 16 frames:
+
+```javascript
+//Idle Function
+var santa = document.getElementById("santa");
+var idleImageNumber = 1;
+var idleWorkerId = 0;
+function idle(){
+    idleImageNumber++;
+    if(idleImageNumber == 17){
+        idleImageNumber = 1;
+    }
+    santa.src = "images/Idle ("+idleImageNumber+").png";
+}
+```
+
+The logic mirrors `run()`: increment, reset at the boundary (17 resets to 1), update `santa.src`. The frame range is 1 through 16.
+
+## Frame Naming Convention
+
+All animation frames follow the same file naming pattern:
+
+```
+images/State (N).png
+```
+
+Where `State` is one of `Idle`, `Run`, `Jump`, or `Dead`, and `N` is the frame number. Note the **space before the opening parenthesis** — this is part of the literal filename and must be preserved exactly in the `src` string. For example:
+
+- `images/Run (1).png` through `images/Run (11).png`
+- `images/Jump (1).png` through `images/Jump (16).png`
+- `images/Dead (1).png` through `images/Dead (17).png`
+- `images/Idle (1).png` through `images/Idle (16).png`

@@ -1,0 +1,184 @@
+---
+title: "Customizing and Extending Santa Run"
+sidebarTitle: "Customization"
+description: "Modify game speed, obstacle difficulty, Santa sprites, sound effects, and the scrolling background to build your own version of Santa Run."
+---
+
+Santa Run is intentionally simple — all the game's behavior is controlled by a handful of constants in `script.js` and CSS properties in `style.css`. This page walks through the most common customizations: tweaking game speed, changing difficulty, swapping sprites and sounds, and adding new features like a persistent high score.
+
+## Changing Game Speed
+
+Every moving part of the game — Santa's run animation, obstacle movement, background scrolling, and score counting — is driven by a `setInterval` call set to `100` milliseconds. Increasing that value slows the game down; decreasing it speeds it up.
+
+```javascript script.js
+// Slow game (easier) → Fast game (default)
+runWorkerId        = setInterval(run,            150); // [!code --]
+runWorkerId        = setInterval(run,            100); // [!code ++]
+backgroundWorkerId = setInterval(moveBackground, 150); // [!code --]
+backgroundWorkerId = setInterval(moveBackground, 100); // [!code ++]
+scoreWorkerId      = setInterval(updateScore,    150); // [!code --]
+scoreWorkerId      = setInterval(updateScore,    100); // [!code ++]
+createBlockId      = setInterval(createBlock,    150); // [!code --]
+createBlockId      = setInterval(createBlock,    100); // [!code ++]
+moveBlockId        = setInterval(moveBlocks,     150); // [!code --]
+moveBlockId        = setInterval(moveBlocks,     100); // [!code ++]
+```
+
+<Warning>
+  All five intervals must be changed together. If `moveBlocks` runs at a different speed from `moveBackground`, obstacles will scroll at a different rate than the background, creating obvious visual glitches. If `run` and `jump` tick at different rates, Santa's animation will look out of sync with her physics.
+</Warning>
+
+## Adjusting Jump Height
+
+The `jump()` function runs on its own `setInterval`. Each tick it increments `jumpImageNumber` and moves Santa vertically by a fixed pixel offset. For the first 9 ticks Santa rises; from tick 10 onward she descends. At tick 17 the jump ends and the run interval resumes.
+
+```javascript script.js
+// In the jump() function
+if(jumpImageNumber <= 9){
+    santaMarginTop = santaMarginTop - 20; // Change 20 to increase jump height
+    santa.style.marginTop = santaMarginTop + "px";
+}
+if(jumpImageNumber >= 10){
+    santaMarginTop = santaMarginTop + 20; // Must match value above
+    santa.style.marginTop = santaMarginTop + "px";
+}
+```
+
+Both values **must match**. The jump covers 9 upward ticks and 7 downward ticks (ticks 10–16), so the pixel offsets are not equal in count — the code relies on both using the same `20px` step so that the net displacement is zero and Santa lands back at her starting `marginTop` of `580px`. If you use different values in the two branches, she will drift up or down on every jump.
+
+## Adjusting Obstacle Spawn Rate and Gap
+
+New obstacles are created by `createBlock()`, which is called on its own `100ms` interval. Each call calculates a random gap between the new block and the previous one:
+
+```javascript script.js
+var gap = Math.random() * (1000 - 400) + 400; // gap between 400–1000px
+blockMarginLeft = blockMarginLeft + gap;
+```
+
+The formula produces a value uniformly distributed between **400px and 1000px**. To make the game harder:
+
+- **Reduce the minimum** (`400`) to allow obstacles to spawn closer together — for example, `Math.random() * (1000 - 200) + 200` allows gaps as small as 200px.
+- **Reduce the maximum** (`1000`) for more consistent, tighter spacing — for example, `Math.random() * (600 - 400) + 400` caps the gap at 600px.
+
+## Swapping Sprites
+
+The game loads sprite frames by constructing filenames dynamically, so replacing sprites is as simple as dropping new PNG files into the `images/` directory.
+
+<Steps>
+  <Step title="Prepare your PNG files">
+    Create or export your replacement frames as PNG files. The game does not resize sprites at runtime — `style.css` sets Santa's height to `200px` and lets the browser scale proportionally, so design your frames at a consistent aspect ratio.
+  </Step>
+
+  <Step title="Name files using the exact pattern">
+    Each animation state uses a numbered sequence with a **space before the parenthesis**:
+
+    ```
+    Run (1).png, Run (2).png, … Run (11).png
+    Jump (1).png, Jump (2).png, … Jump (16).png
+    Idle (1).png, Idle (2).png, … Idle (16).png
+    Dead (1).png, Dead (2).png, … Dead (17).png
+    ```
+
+    The filename pattern in `script.js` is `"images/Run (" + runImageNumber + ").png"` — any deviation (wrong case, missing space, different extension) will break the animation with a broken image.
+  </Step>
+
+  <Step title="Place files in the images/ directory">
+    Copy your new PNG files into `images/`, overwriting the originals. Reload the browser to verify the animation plays correctly.
+  </Step>
+
+  <Step title="Update frame counts if your animation differs">
+    If your replacement animation has a different number of frames, update the reset conditions in `script.js` to match. The four places to check are:
+
+    | State | Reset condition | Frame count |
+    |---|---|---|
+    | Run | `if(runImageNumber == 12)` | 11 frames (1–11) |
+    | Jump | `if(jumpImageNumber == 17)` | 16 frames (1–16) |
+    | Idle | `if(idleImageNumber == 17)` | 16 frames (1–16) |
+    | Dead | `if(deadImageNumber == 18)` | 17 frames (1–17, then freeze at 17) |
+
+    For example, if your Run animation has 8 frames, change `if(runImageNumber == 12)` to `if(runImageNumber == 9)`.
+  </Step>
+</Steps>
+
+## Swapping Audio
+
+Audio files are loaded by filename when `script.js` is first parsed, before any user interaction:
+
+```javascript script.js
+var runSound  = new Audio("run.mp3");
+var jumpSound = new Audio("jump.mp3");
+var deadSound = new Audio("dead.mp3");
+```
+
+To replace a sound, drop a new audio file into the project root directory using the **exact same filename**. The game will pick it up on the next page load. MP3 has the widest cross-browser support; if you use OGG or WAV, test across browsers before committing.
+
+## Changing the Background
+
+The scrolling background is a single image referenced in `style.css`:
+
+```css style.css
+.background {
+    width: 100vw;
+    height: 100vh;
+    background-image: url("images/background.png");
+    background-size: cover;
+    overflow-x: hidden;
+    position: absolute;
+}
+```
+
+Replace `images/background.png` with any image you like. Because `background-size: cover` is set, the image will always scale to fill the full viewport regardless of its native dimensions. The background scrolls via `backgroundPositionX` in `moveBackground()`:
+
+```javascript script.js
+function moveBackground(){
+    backgroundX = backgroundX - 20;
+    background.style.backgroundPositionX = backgroundX + "px";
+}
+```
+
+The position decreases by 20px per tick with no wrap-around reset, so **a seamlessly tileable (repeating) image works best** — the browser repeats it automatically via the default `background-repeat: repeat` behavior.
+
+## Adding a High Score
+
+<Accordion title="Store and display a persistent high score with localStorage">
+  The game over sequence lives in the `dead()` function. When `deadImageNumber` reaches `18`, the game freezes Santa's animation, resets her position to `580px`, reveals the `#gameOver` overlay, and writes the final score to `#endScore`. You can hook into this point to persist and display a high score.
+
+  Add the following lines inside the `if(deadImageNumber == 18)` block in `dead()`, after the existing `endScore` assignment:
+
+  ```javascript script.js
+  // In the dead() function, after setting endScore innerHTML:
+  var highScore = localStorage.getItem('santaHighScore') || 0;
+  if(newScore > highScore){
+      localStorage.setItem('santaHighScore', newScore);
+  }
+  document.getElementById('endScore').innerHTML =
+      newScore + ' (Best: ' + localStorage.getItem('santaHighScore') + ')';
+  ```
+
+  `localStorage` persists across page reloads and browser restarts within the same origin, so the best score survives a full refresh or a "Try Again" click. Note that `re()` calls `location.reload()`, which resets all JavaScript variables — `newScore` returns to `0` — but the value stored in `localStorage` is unaffected.
+</Accordion>
+
+## Modifying the Collision Zone
+
+Collision detection happens inside `moveBlocks()`. Every tick, each obstacle's `marginLeft` is decremented by `20px`, and then four boundary checks determine whether that block has hit Santa:
+
+```javascript script.js
+if(newMarginLeft <= 118){       // obstacle's left edge has reached Santa's right side
+    if(newMarginLeft >= 18){    // obstacle's left edge hasn't passed Santa's left side
+        if(santaMarginTop <= 580){ // Santa is at or below ground level (top of hitbox)
+            if(santaMarginTop > 520){  // Santa hasn't jumped above the hitbox (bottom limit)
+                // collision — trigger dead()
+            }
+        }
+    }
+}
+```
+
+What each constant controls:
+
+| Constant | Axis | Meaning |
+|---|---|---|
+| `<= 118` and `>= 18` | Horizontal | 100px-wide window centered on Santa's x position |
+| `<= 580` and `> 520` | Vertical | 60px-tall window at ground level (Santa's standing position) |
+
+To make collisions **more forgiving**, shrink these windows — for example, change `<= 118` to `<= 108` and `>= 18` to `>= 28` to reduce the horizontal hitbox by 20px. To account for a taller Santa sprite or a lower ground line, adjust the vertical constants (`580` and `520`) accordingly.

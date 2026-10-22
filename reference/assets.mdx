@@ -1,0 +1,96 @@
+---
+title: "Santa Run Asset Inventory: Sprites, Audio, and Images"
+sidebarTitle: "Assets"
+description: "Every image and audio file used in Santa Run — their roles, frame counts, file naming conventions, CSS references, and how audio objects are initialized at script load time."
+---
+
+Santa Run bundles all its assets locally — no CDN or external resources are needed. This page inventories every image and audio file, its role in the game, and the naming convention used by the animation system. All asset paths are relative to the project root, matching the paths written in `script.js` and `style.css`.
+
+## Sprite Animations
+
+Santa has four animation states, each represented by a numbered sequence of PNG frames stored in the `images/` directory. The JavaScript animation functions cycle through these frames by constructing the file path string on every interval tick.
+
+| Animation | Frames | File Pattern | Usage |
+|---|---|---|---|
+| Idle | 16 | `images/Idle (1).png` … `images/Idle (16).png` | Displayed before game start |
+| Run | 11 | `images/Run (1).png` … `images/Run (11).png` | Santa running after Enter is pressed |
+| Jump | 16 | `images/Jump (1).png` … `images/Jump (16).png` | Santa jumping after Space is pressed |
+| Dead | 17 | `images/Dead (1).png` … `images/Dead (17).png` | Death animation on obstacle collision |
+
+## File Naming Convention
+
+All sprite frames follow a consistent pattern:
+
+```
+images/State (N).png
+```
+
+There is a **space before the opening parenthesis** in every filename. This space is part of the actual filename on disk and is reflected directly in the JavaScript string concatenation used to build each path. For example, the Run animation path is constructed as:
+
+```javascript
+santa.src = "images/Run (" + runImageNumber + ").png";
+```
+
+Similarly for the other animations:
+
+```javascript
+santa.src = "images/Idle (" + idleImageNumber + ").png";
+santa.src = "images/Dead (" + deadImageNumber + ").png";
+```
+
+<Warning>
+  If you rename any sprite file and omit the space before the parenthesis (e.g. `Run(1).png` instead of `Run (1).png`), the browser will silently fail to load the image and Santa's sprite will disappear. The path string in `script.js` must exactly match the filename on disk, including the space.
+</Warning>
+
+## Background and Obstacle
+
+Two additional image assets handle the game world and the obstacle.
+
+| File | Type | Usage | CSS Property |
+|---|---|---|---|
+| `images/background.png` | PNG | Scrolling landscape background | `background-image` on `.background` |
+| `images/flame.gif` | GIF | Animated flame obstacle | `background-image` on `.block` |
+
+The background image is scrolled horizontally by `moveBackground()`, which decrements `backgroundX` by 20 px per tick and writes it to `background.style.backgroundPositionX`. The flame is an animated GIF, so it animates on its own without any JavaScript frame-cycling logic — the browser handles its animation loop automatically.
+
+## Audio Files
+
+The game uses three audio files, each tied to a specific game event. All three are loaded as `Audio` objects at script parse time.
+
+| File | Format | Loop | Trigger | Variable |
+|---|---|---|---|---|
+| `run.mp3` | MP3 | Yes (`loop = true`) | Enter pressed (game start) | `runSound` |
+| `jump.mp3` | MP3 | No | Space pressed (jump) | `jumpSound` |
+| `dead.mp3` | MP3 | No | Collision detected | `deadSound` |
+
+## Audio Initialization
+
+The three `Audio` objects are created using `new Audio()` at the top level of `script.js`, meaning they are initialized as soon as the script is parsed — before any user interaction:
+
+```javascript
+var runSound = new Audio("run.mp3");
+runSound.loop = true;
+var jumpSound = new Audio("jump.mp3");
+var deadSound = new Audio("dead.mp3");
+```
+
+`runSound.loop = true` is set immediately after construction, ensuring that the running background music restarts automatically when it reaches the end. `jumpSound` and `deadSound` play once per trigger and stop naturally when their file ends.
+
+Audio playback is controlled directly in `keyCheck()` and `moveBlocks()`:
+
+- `runSound.play()` is called when Enter is pressed and when `jump()` completes (run resumes).
+- `runSound.pause()` is called when Space is pressed (jump starts) and when a collision is detected.
+- `jumpSound.play()` is called when Space is pressed.
+- `deadSound.play()` is called when a collision is detected in `moveBlocks()`.
+
+## Replacing Assets
+
+<Tip>
+  Any asset can be swapped by replacing the file at the same path with the same filename. The JavaScript and CSS reference assets by path string only — there are no asset manifests, content hashes, or import statements. To change the background, replace `images/background.png`. To change the flame obstacle, replace `images/flame.gif`. To swap a sprite sheet, replace the corresponding numbered PNGs. No code changes are required as long as the filenames remain identical.
+</Tip>
+
+## Idle Animation Note
+
+<Note>
+  `idleWorkerId` is declared as a global variable and initialized to `0`, but the `idle()` function is never registered with `setInterval` anywhere in the codebase. Santa does not cycle through the full 16-frame Idle animation at runtime. Instead, the `<img>` element in `index.html` has its `src` attribute hardcoded to `images/Idle (1).png`, so only the first frame of the Idle sprite sheet is ever displayed — as a static image while waiting for the player to press Enter.
+</Note>
