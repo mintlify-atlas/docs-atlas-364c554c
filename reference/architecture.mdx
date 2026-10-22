@@ -1,7 +1,7 @@
 ---
-title: "Santa Run Architecture and Code Organization"
+title: "Santa Run Architecture: Game Loop and Code Organization"
 sidebarTitle: "Architecture"
-description: "How Santa Run's three source files work together, the interval-based game loop driving all animation, and the key design decisions behind this dependency-free browser game."
+description: "How Santa Run divides responsibilities across three files, runs six setInterval workers for animation, and manages game state with global variables."
 ---
 
 Santa Run's architecture is deliberately minimal — three files (HTML, CSS, JS) with no build step, no dependencies, and no module system. The entire game state lives in JavaScript global variables, and the game loop is driven by multiple `setInterval` timers. This approach keeps the project self-contained: opening `index.html` in any modern browser is all it takes to play.
@@ -72,7 +72,7 @@ Game state is not stored in an object or enum — it emerges from which interval
 
 Animation and movement are achieved through direct, imperative DOM property writes on every interval tick — there is no virtual DOM or rendering abstraction.
 
-- **Sprite animation**: `santa.src` is set to a new image path string on every `run()`, `jump()`, `idle()`, or `dead()` tick. Example: `santa.src = "images/Run (" + runImageNumber + ").png";`
+- **Sprite animation**: `santa.src` is set to a new image path string on every `run()`, `idle()`, or `dead()` tick. Example: `santa.src = "images/Run (" + runImageNumber + ").png";` Note that `jump()` does not update `santa.src` — the Run sprite stays visible during a jump.
 - **Santa vertical position**: `santa.style.marginTop` is written directly with a pixel value each tick of `jump()` and `dead()`.
 - **Obstacle creation**: Each new obstacle is a `document.createElement("div")` with `className = "block"` and a generated `id` like `"block1"`, `"block2"`, etc. It is appended to `document.getElementById("background")`.
 - **Obstacle movement**: `moveBlocks()` loops over all block IDs, reads `currentBlock.style.marginLeft`, parses it with `parseInt`, subtracts 20, and writes it back.

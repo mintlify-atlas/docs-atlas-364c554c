@@ -1,7 +1,7 @@
 ---
-title: "Santa Sprite Animations: Frames and Timing"
+title: "Santa Run Sprite Animations: Frames, Timing, and States"
 sidebarTitle: "Animations"
-description: "Explore Santa Run's four animation states — Idle, Run, Jump, and Dead — including frame counts, 100ms tick timing, vertical physics, and how state transitions are managed."
+description: "Santa Run's four animation states — Idle, Run, Jump, and Dead — with frame counts, 100ms tick timing, vertical physics, and state transition logic."
 ---
 
 Santa Run animates the player character by swapping individual PNG frames on the `<img id="santa">` element using the DOM `src` attribute. There is no canvas, no spritesheet clipping, and no CSS animation — each tick of a `setInterval` callback simply increments a counter and assigns a new file path to `santa.src`. There are four distinct animation states: Idle, Run, Jump, and Dead, each driven by its own interval worker and frame counter variable.
@@ -68,7 +68,7 @@ function jump(){
 
         runWorkerId = setInterval(run, 100);
         runSound.play();
-    }   
+    }
 }
 ```
 
@@ -137,7 +137,7 @@ The logic mirrors `run()`: increment, reset at the boundary (17 resets to 1), up
 
 All animation frames follow the same file naming pattern:
 
-```
+```text
 images/State (N).png
 ```
 

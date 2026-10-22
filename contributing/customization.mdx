@@ -1,5 +1,5 @@
 ---
-title: "Customizing and Extending Santa Run"
+title: "Customizing Santa Run: Speed, Sprites, Sounds, and More"
 sidebarTitle: "Customization"
 description: "Modify game speed, obstacle difficulty, Santa sprites, sound effects, and the scrolling background to build your own version of Santa Run."
 ---
@@ -72,7 +72,7 @@ The game loads sprite frames by constructing filenames dynamically, so replacing
   <Step title="Name files using the exact pattern">
     Each animation state uses a numbered sequence with a **space before the parenthesis**:
 
-    ```
+    ```text
     Run (1).png, Run (2).png, … Run (11).png
     Jump (1).png, Jump (2).png, … Jump (16).png
     Idle (1).png, Idle (2).png, … Idle (16).png
@@ -105,8 +105,11 @@ The game loads sprite frames by constructing filenames dynamically, so replacing
 Audio files are loaded by filename when `script.js` is first parsed, before any user interaction:
 
 ```javascript script.js
-var runSound  = new Audio("run.mp3");
+var runSound = new Audio("run.mp3");
+runSound.loop = true;
+// ...
 var jumpSound = new Audio("jump.mp3");
+// ...
 var deadSound = new Audio("dead.mp3");
 ```
 

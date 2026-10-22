@@ -26,7 +26,7 @@ All assets — sprite frames, the background image, obstacle animation, and audi
 
 <CardGroup cols={2}>
   <Card title="Sprite-Based Animation" icon="film">
-    Santa cycles through four hand-crafted animation states: **Idle** (16 frames), **Run** (11 frames), **Jump** (16 frames), and **Dead** (17 frames). Each state is driven by a `setInterval` loop that swaps the `<img>` `src` every 100ms.
+    Santa's active sprite animations are **Run** (11 frames) and **Dead** (17 frames), each driven by a `setInterval` loop that swaps the `<img>` `src` every 100ms. An **Idle** state (16 frames) is defined in code but its interval is never started — the game opens on the first Idle frame and waits. During a jump, only `marginTop` changes; no jump sprite is rendered.
   </Card>
   <Card title="Randomized Obstacle Spawning" icon="shuffle">
     Flame obstacles are created dynamically and placed with a randomized gap of **400–1000px** between each one, keeping every run unpredictable. Obstacles move left at 20px per tick.
@@ -49,7 +49,7 @@ All assets — sprite frames, the background image, obstacle animation, and audi
 
 All files live in a single flat directory — no bundler output folders, no nested `src/` directories. The `images/` folder holds every sprite frame and the background.
 
-```
+```text
 Santa-Run/
 ├── index.html       # Game shell and DOM structure
 ├── script.js        # All game logic
@@ -61,8 +61,8 @@ Santa-Run/
     ├── background.png
     ├── flame.gif        # Obstacle sprite
     ├── Run (1-11).png   # Run animation frames
-    ├── Jump (1-16).png  # Jump animation frames
-    ├── Idle (1-16).png  # Idle animation frames
+    ├── Jump (1-16).png  # Jump sprite frames (not used by animation logic)
+    ├── Idle (1-16).png  # Idle sprite frames (only frame 1 displayed on load)
     └── Dead (1-17).png  # Death animation frames
 ```
 

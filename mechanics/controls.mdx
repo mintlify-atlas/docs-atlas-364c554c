@@ -1,7 +1,7 @@
 ---
-title: "Santa Run Controls and Input Handling"
+title: "Santa Run Controls: keyCheck, Enter, and Space Keys"
 sidebarTitle: "Controls"
-description: "Learn how Santa Run's keyCheck() handler reads Enter and Space key codes to start the game, trigger jumps, and manage state transitions through interval worker IDs."
+description: "How keyCheck() uses event.which to start the game on Enter, trigger jumps on Space, and gate transitions with runWorkerId and jumpWorkerId."
 ---
 
 Santa Run relies on a single keyboard event handler, `keyCheck`, wired directly to the `<body>` tag via the `onkeyup` attribute in `index.html`. Every keystroke anywhere in the browser window fires this function — no element needs focus. The handler inspects `event.which` to identify which key was pressed and then conditionally starts or modifies game state based on the current values of `runWorkerId` and `jumpWorkerId`.

@@ -1,7 +1,7 @@
 ---
-title: "Scoring System and Score Display"
+title: "Santa Run Scoring: Time-Based Points and Score Display"
 sidebarTitle: "Scoring"
-description: "Discover how Santa Run's time-based score increments by 1 every 100ms, how it's rendered live in the DOM, copied to the Game Over screen, and fully reset on page reload."
+description: "Santa Run's score increments by 1 every 100ms via updateScore(), displays live in the DOM, transfers to the Game Over screen, and resets on page reload."
 ---
 
 Santa Run uses a purely time-based scoring system. There are no coins to collect, no multipliers, and no bonus events — the score simply increments by 1 every 100 milliseconds that the player stays alive. The longer Santa runs without hitting a flame, the higher the final score. This makes survival the only strategy.
@@ -16,7 +16,7 @@ var score = document.getElementById("score");
 var newScore = 0;
 var scoreWorkerId = 0;
 function updateScore(){
-    newScore++; 
+    newScore++;
     score.innerHTML = newScore;
 }
 ```

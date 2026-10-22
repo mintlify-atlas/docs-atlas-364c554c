@@ -1,7 +1,7 @@
 ---
 title: "How to Play Santa Run: Controls, Jumping & Survival"
 sidebarTitle: "How to Play"
-description: "Learn how to start Santa Run, master the jump arc, avoid flame obstacles, and understand exactly what causes a Game Over — everything you need to survive."
+description: "Learn how to start Santa Run, master the jump arc, avoid flame obstacles, and understand what triggers a Game Over — all you need to survive."
 ---
 
 This page covers everything you need to know to play Santa Run — from opening the game in your browser to understanding the jump arc well enough to clear every obstacle in your path.
@@ -12,8 +12,8 @@ This page covers everything you need to know to play Santa Run — from opening 
   <Step title="Open index.html in your browser">
     Navigate to the `Santa-Run/` folder and open `index.html` directly in any modern web browser. No local server, no build step, and no internet connection are required.
   </Step>
-  <Step title="Wait for Santa's Idle animation">
-    Once the page loads, Santa appears on the left side of the screen cycling through his 16-frame **Idle** animation. The background is static and the score reads **0**. The game is waiting for your input.
+  <Step title="Wait for Santa's Idle frame">
+    Once the page loads, Santa appears on the left side of the screen displaying the first **Idle** frame. The background is static and the score reads **0**. The game is waiting for your input.
   </Step>
   <Step title="Press Enter to begin">
     Press **Enter** to start the run. Santa immediately transitions to his 11-frame **Run** animation, the background begins scrolling left, flame obstacles start spawning from the right, and the score counter begins incrementing.
@@ -39,37 +39,38 @@ Your **score increments by 1 every 100ms** you stay alive. The score is entirely
 
 ## Jumping
 
-When you press **Space**, Santa's Run animation stops and his 16-frame Jump animation begins. The jump arc works as follows:
+When you press **Space**, Santa's Run animation stops and a jump interval begins, moving Santa's position up and then back down. There is no separate jump sprite — Santa holds his last Run frame image throughout the arc. The jump arc works as follows:
 
 - **Frames 1–9 (ascent):** Santa moves **up 20px per frame**, rising a total of **160px** above the ground.
-- **Frames 10–16 (descent):** Santa moves **down 20px per frame**, returning to his starting `marginTop` of **580px**.
+- **Frames 10–16 (descent):** Santa moves **down 20px per frame**, returning toward his starting `marginTop` of **580px**.
+- **Frame 17 (reset):** Santa moves down the final 20px back to `580px`, the jump interval clears itself, Santa switches back to the Run animation, and the run sound resumes.
 
-Each frame lasts 100ms, giving the full jump arc a total air time of approximately **1.6 seconds**. Once frame 16 completes, the jump interval clears itself, Santa switches back to the Run animation, and the run sound resumes.
+Each frame lasts 100ms, giving the full jump arc a total air time of approximately **1.6 seconds** (16 interval ticks before the reset on tick 17).
 
 <Info>
-  Santa starts and lands at a `marginTop` of **580px**. During peak altitude (after frame 9), his `marginTop` is **420px** — well above the collision zone.
+  Santa starts and lands at a `marginTop` of **580px**. During peak altitude (after frame 9 of the ascent), his `marginTop` is **420px** — well above the collision zone ceiling of 520px.
 </Info>
 
 ## Game Over
 
 Collision detection runs inside the `moveBlocks` interval (every 100ms). A collision is registered when **both** of these conditions are true at the same moment:
 
-- A flame block's `marginLeft` is between **18px and 118px** (the 100px-wide danger window in front of Santa)
-- Santa's `marginTop` is between **520px and 580px** (i.e., Santa is on or near the ground — not airborne)
+- A flame block's `marginLeft` is between **18px and 118px** inclusive (the 100px-wide danger window in front of Santa)
+- Santa's `marginTop` is **greater than 520px and up to 580px** (i.e., Santa is on or very near the ground — not airborne)
 
 When a collision is detected:
 
 1. All active intervals — running, jumping, background scrolling, scoring, spawning, and block movement — are immediately cleared.
-2. The **Dead** animation plays through all 17 frames (one per 100ms, ~1.7 seconds total).
-3. After frame 17, Santa's `marginTop` is reset to `580px` and the **Game Over** overlay becomes visible, displaying the text "Game Over", "Your Score", and your final score value.
+2. The **Dead** animation cycles through frames 1–17 at 100ms per frame. When the internal counter reaches 18, it freezes on frame 17 (~1.7 seconds total).
+3. On that freeze tick, Santa's `marginTop` is reset to `580px` and the **Game Over** overlay becomes visible, displaying the text "Game Over", "Your Score", and your final score value.
 
 <Warning>
-  There is no iframe — collision detection checks every single active block on each tick. The longer you survive, the more blocks accumulate in the DOM, which means more checks per tick.
+  Blocks are never removed from the DOM after they scroll off-screen — collision detection checks every spawned block on each tick. The longer you survive, the more blocks accumulate, which means more checks per interval.
 </Warning>
 
 ## Restarting
 
-Click the **Try Again** button on the Game Over overlay. It calls `location.reload()`, which performs a full browser page reload — resetting all JavaScript variables, clearing all intervals, removing all spawned DOM elements, and returning Santa to his Idle animation.
+Click the **Try Again** button on the Game Over overlay. It calls `location.reload()`, which performs a full browser page reload — resetting all JavaScript variables, clearing all intervals, removing all spawned DOM elements, and returning Santa to the first Idle frame.
 
 There is no partial reset or state restore; every new run starts completely fresh.
 

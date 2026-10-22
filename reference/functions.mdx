@@ -1,7 +1,7 @@
 ---
-title: "Santa Run JavaScript Function Reference"
+title: "Santa Run JavaScript Functions: Complete Script Reference"
 sidebarTitle: "Functions"
-description: "Complete reference for all 10 functions in script.js — their signatures, behaviors, side effects, and the global variables each function reads and modifies."
+description: "Reference for all 10 script.js functions — behavior, side effects, and the global variables each function reads and modifies during gameplay."
 ---
 
 `script.js` contains all of Santa Run's game logic in 10 functions, all operating on global variables. There are no classes, modules, or closures — every function and variable lives in the global scope. This reference documents each function's signature, behavior, side effects, and the global variables it reads and modifies.
@@ -249,10 +249,10 @@ function jump(){
 
 **Global variables read:** `jumpImageNumber`, `santaMarginTop`
 
-**Global variables modified:** `jumpImageNumber`, `santaMarginTop`, `santa.style.marginTop`, `santa.src` (indirectly via the sprite path — note: `jump()` does not explicitly set `santa.src`; the sprite changes are driven by `santaMarginTop` position changes only)
+**Global variables modified:** `jumpImageNumber`, `santaMarginTop`, `santa.style.marginTop`; on frame 17: `jumpWorkerId` (reset to `0`), `runWorkerId` (new interval handle)
 
 <Note>
-  The `jump()` function moves Santa's vertical position but does **not** set `santa.src` to a Jump sprite. The Run sprite continues to display during the jump — the Jump sprite sheet (`images/Jump (N).png`) is never referenced in the current codebase. The `jumpImageNumber` variable controls vertical movement timing only.
+  `jump()` never sets `santa.src`. The Run sprite continues to display during the entire jump — the `images/Jump (N).png` files exist on disk but are not referenced anywhere in the codebase. `jumpImageNumber` controls only the vertical movement timing, not sprite swapping.
 </Note>
 
 ---

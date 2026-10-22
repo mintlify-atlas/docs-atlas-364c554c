@@ -1,10 +1,10 @@
 ---
-title: "Flame Obstacles: Spawning and Collision"
+title: "Santa Run Flame Obstacles: Spawning, Movement, and Collision"
 sidebarTitle: "Obstacles"
-description: "Understand how Santa Run creates flame obstacle divs, randomizes spacing between 400–1000px, moves them at 20px per tick, and detects collision using margin-based hitboxes."
+description: "How Santa Run creates flame obstacle divs, randomizes spacing 400–1000px, moves them 20px per tick, and detects collision using margin-based hitboxes."
 ---
 
-Santa Run spawns flame obstacles as `<div>` elements styled with `flame.gif` as a repeating background image. Each obstacle is created by `createBlock()`, appended to the `#background` div, and then translated left every 100ms by `moveBlocks()`. A collision check runs on every single movement tick — the moment a flame block's horizontal position overlaps Santa's fixed x-position while Santa is on the ground, the game ends.
+Santa Run spawns flame obstacles as `<div>` elements styled with `flame.gif` as a cover background image. Each obstacle is created by `createBlock()`, appended to the `#background` div, and then translated left every 100ms by `moveBlocks()`. A collision check runs on every single movement tick — the moment a flame block's horizontal position overlaps Santa's fixed x-position while Santa is on the ground, the game ends.
 
 ## Obstacle Appearance
 
@@ -91,7 +91,7 @@ function moveBlocks(){
                 }
             }
         }
-    }              
+    }
 }
 ```
 

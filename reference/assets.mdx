@@ -1,7 +1,7 @@
 ---
 title: "Santa Run Asset Inventory: Sprites, Audio, and Images"
 sidebarTitle: "Assets"
-description: "Every image and audio file used in Santa Run — their roles, frame counts, file naming conventions, CSS references, and how audio objects are initialized at script load time."
+description: "Inventory of every Santa Run asset: sprite frame counts, file naming conventions, CSS references, and how the three Audio objects are set up in script.js."
 ---
 
 Santa Run bundles all its assets locally — no CDN or external resources are needed. This page inventories every image and audio file, its role in the game, and the naming convention used by the animation system. All asset paths are relative to the project root, matching the paths written in `script.js` and `style.css`.
@@ -14,14 +14,14 @@ Santa has four animation states, each represented by a numbered sequence of PNG 
 |---|---|---|---|
 | Idle | 16 | `images/Idle (1).png` … `images/Idle (16).png` | Displayed before game start |
 | Run | 11 | `images/Run (1).png` … `images/Run (11).png` | Santa running after Enter is pressed |
-| Jump | 16 | `images/Jump (1).png` … `images/Jump (16).png` | Santa jumping after Space is pressed |
+| Jump | 16 | `images/Jump (1).png` … `images/Jump (16).png` | Files exist on disk but are not used — see note below |
 | Dead | 17 | `images/Dead (1).png` … `images/Dead (17).png` | Death animation on obstacle collision |
 
 ## File Naming Convention
 
 All sprite frames follow a consistent pattern:
 
-```
+```text
 images/State (N).png
 ```
 
@@ -89,8 +89,12 @@ Audio playback is controlled directly in `keyCheck()` and `moveBlocks()`:
   Any asset can be swapped by replacing the file at the same path with the same filename. The JavaScript and CSS reference assets by path string only — there are no asset manifests, content hashes, or import statements. To change the background, replace `images/background.png`. To change the flame obstacle, replace `images/flame.gif`. To swap a sprite sheet, replace the corresponding numbered PNGs. No code changes are required as long as the filenames remain identical.
 </Tip>
 
-## Idle Animation Note
+## Unused Sprite Notes
 
 <Note>
   `idleWorkerId` is declared as a global variable and initialized to `0`, but the `idle()` function is never registered with `setInterval` anywhere in the codebase. Santa does not cycle through the full 16-frame Idle animation at runtime. Instead, the `<img>` element in `index.html` has its `src` attribute hardcoded to `images/Idle (1).png`, so only the first frame of the Idle sprite sheet is ever displayed — as a static image while waiting for the player to press Enter.
+</Note>
+
+<Note>
+  The 16 Jump sprite files (`images/Jump (1).png` through `images/Jump (16).png`) exist on disk but are never referenced in `script.js`, `index.html`, or `style.css`. The `jump()` function only adjusts `santa.style.marginTop` for vertical movement — it never sets `santa.src`. The Run sprite continues to display throughout the jump animation.
 </Note>
